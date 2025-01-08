@@ -1,0 +1,128 @@
+// サーバーサイドコード
+import { createRequire } from 'module';
+const require = createRequire(import.meta.url);
+const Database = require('better-sqlite3');
+const express = require('express');
+const bodyParser = require('body-parser');
+const cors = require('cors');
+
+const app = express();
+app.use(bodyParser.json());
+app.use(cors());
+const port = 8000;
+const db = new Database('app18.db');
+
+// サーバー起動
+app.listen(port, () => console.log(`Server running!!! at http://localhost:${port}`));
+
+// データベース初期化
+db.exec(`CREATE TABLE IF NOT EXISTS todos (
+  id INTEGER PRIMARY KEY AUTOINCREMENT,
+  task TEXT NOT NULL,
+  completed INTEGER DEFAULT 0
+)`);
+
+// API エンドポイント
+app.get('/app18/todos', (req, res) => {
+  try {
+    const rows = db.prepare('SELECT * FROM todos').all();
+    res.json(rows);
+  } catch (error) {
+    console.error('Error fetching todos:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.post('/app18/todos', (req, res) => {
+  try {
+    const { task } = req.body;
+    if (!task) return res.status(400).json({ error: 'Task is required' });
+    const info = db.prepare('INSERT INTO todos (task) VALUES (?)').run(task);
+    res.json({ id: info.lastInsertRowid, task, completed: 0 });
+  } catch (error) {
+    console.error('Error adding todo:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.patch('/app18/todos/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const info = db.prepare('UPDATE todos SET completed = NOT completed WHERE id = ?').run(id);
+    if (info.changes === 0) return res.status(404).json({ error: 'Todo not found' });
+    res.json({ id, updated: info.changes });
+  } catch (error) {
+    console.error('Error updating todo:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+app.delete('/app18/todos/:id', (req, res) => {
+  try {
+    const { id } = req.params;
+    const info = db.prepare('DELETE FROM todos WHERE id = ?').run(id);
+    if (info.changes === 0) return res.status(404).json({ error: 'Todo not found' });
+    res.json({ id, deleted: info.changes });
+  } catch (error) {
+    console.error('Error deleting todo:', error.message);
+    res.status(500).json({ error: 'Internal Server Error' });
+  }
+});
+
+
+
+//---------------
+
+
+<script>
+  import { onMount } from 'svelte';
+  let tasks = [];
+  let newTask = '';
+  const end_point = 'http://localhost:8000';
+
+  async function fetchTasks() {
+    const res = await fetch(`${end_point}/app18/todos`);
+    tasks = await res.json();
+  }
+
+  async function addTask() {
+    if (!newTask) return;
+    await fetch('http://localhost:8000/app18/todos', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ task: newTask })
+    });
+    newTask = '';
+    fetchTasks();
+  }
+
+  async function toggleTask(id) {
+    await fetch(`${end_point}/app18/todos/${id}`, { method: 'PATCH' });
+    fetchTasks();
+  }
+
+  async function deleteTask(id) {
+    await fetch(`http://localhost:8000/app18/todos/${id}`, { method: 'DELETE' });
+    fetchTasks();
+  }
+
+  onMount(fetchTasks);
+</script>
+
+<style>
+  body { font-family: Arial, sans-serif; margin: 20px; }
+  .task { display: flex; justify-content: space-between; margin: 5px 0; }
+  .completed { text-decoration: line-through; }
+</style>
+
+<h1>Todo List</h1>
+<input bind:value={newTask} placeholder="Add a new task" />
+<button on:click={addTask}>Add</button>
+<ul>
+  {#each tasks as task}
+    <li class="task {task.completed ? 'completed' : ''}">
+      <span on:click={() => toggleTask(task.id)}>{task.task}</span>
+      <button on:click={() => deleteTask(task.id)}>Delete</button>
+    </li>
+  {/each}
+</ul>
