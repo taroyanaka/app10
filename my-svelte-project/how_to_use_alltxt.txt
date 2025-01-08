@@ -1,1 +1,5 @@
+cd ../server_side/
+nomdemon ./server.js
+
+
 awk '/\/\/---------------/{f=1;next} !f{print > "../server_side/server.js"} f{print > "./src/App.svelte"}' ./all.txt
