@@ -1,3 +1,6 @@
+https://chatgpt.com/share/677e253c-ac24-8012-90e1-f5a733a0a579
+
+
 cd ../server_side/
 nomdemon ./server.js
 
