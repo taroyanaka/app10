@@ -30,7 +30,6 @@ app.post('/app18/init_db', (req, res) => {
   }
 });
 
-
 // API エンドポイント
 app.get('/app18/read_todos', (req, res) => {
   try {
@@ -66,8 +65,7 @@ app.post('/app18/todos/delete/:id', (req, res) => {
   }
 });
 
-
-app.post('/app18/todos', (req, res) => {
+app.post('/app18/add_todos', (req, res) => {
   try {
     const { task } = req.body;
     if (!task) return res.status(400).json({ error: 'Task is required' });
